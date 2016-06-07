@@ -1,0 +1,5 @@
+((synopsis "Bindings to the nuklear library")
+ (author "Vasilij Schneidermann")
+ (license "Public Domain")
+ (category ui)
+ (foreign-depends "GLFW3" "GL2" "GLU"))
