@@ -6,5 +6,6 @@
 
 (install-extension
  'nuklear
- '("nuklear.so" "nuklear.import.so")
+ '("nuklear-glfw-opengl2.so" "nuklear-glfw-opengl2.import.so"
+   "nuklear.so" "nuklear.import.so")
  '((version "0.0.1")))
