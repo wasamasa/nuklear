@@ -1,8 +1,10 @@
 (use (prefix glfw3 glfw:)
      (prefix opengl-glew gl:)
      (prefix nuklear nk:)
-     (prefix nuklear-glfw-opengl2 backend:)
      extras)
+
+(require-library nuklear-glfw-opengl2)
+(import (prefix nuklear-glfw-opengl2 backend:))
 
 (define width 1200)
 (define height 800)
