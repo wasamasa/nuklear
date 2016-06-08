@@ -1,4 +1,7 @@
-(compile -s -O3 -d1 "nuklear-glfw-opengl2.scm" -j nuklear-glfw-opengl2 -C "-std=gnu89")
+;; TODO: detect correct per-platform flags
+;; NOTE: https://github.com/vurtun/nuklear/blob/master/demo/glfw_opengl2/Makefile
+
+(compile -s -O3 -d1 "nuklear-glfw-opengl2.scm" -j nuklear-glfw-opengl2 -lglfw -lGL -lm -lGLU -C "-std=gnu89")
 (compile -s "nuklear-glfw-opengl2.import.scm")
 
 (compile -s -O3 -d1 "nuklear.scm" -j nuklear -C "-std=gnu89")
