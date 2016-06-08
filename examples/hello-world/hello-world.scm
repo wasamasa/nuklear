@@ -7,7 +7,7 @@
 (define height 150)
 
 (glfw:init)
-(glfw:make-window width height "Demo")
+(glfw:make-window width height "Hello World")
 (glfw:make-context-current (glfw:window))
 (set!-values (width height) (glfw:get-window-size (glfw:window)))
 
