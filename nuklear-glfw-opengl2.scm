@@ -1,5 +1,5 @@
 (module nuklear-glfw-opengl2
-  (init! make-font init-fonts! new-frame render! shutdown!)
+  (init! make-font init-font! new-frame render! shutdown!)
 
 (import chicken scheme foreign)
 
@@ -19,13 +19,25 @@
 <#
 
 ;;; parameters
+
 (define anti-alias? (make-parameter #t))
 (define max-vertex-buffer (make-parameter (* 512 1024)))
 (define max-element-buffer (make-parameter (* 128 1024)))
 
 ;;; auxiliary records
+
 (define-record context pointer)
 (define-record font filename size)
+
+;;; errors
+
+(define (define-error location message #!rest condition)
+  (let ((base (make-property-condition 'exn 'location location 'message message))
+        (extra (apply make-property-condition condition)))
+    (make-composite-condition base extra)))
+
+(define (nuklear-error message location)
+  (define-error location message 'nuklear))
 
 ;;; enums
 
@@ -39,8 +51,8 @@
 
 ;;; foreign functions
 
-(define nk_glfw3_init (foreign-lambda (c-pointer (struct "nk_context")) "nk_glfw3_init" (c-pointer (struct "GLFWwindow")) (enum "nk_glfw_init_state")))
-(define nk_glfw3_init_fonts (foreign-lambda* void ((pointer-vector data) (int size)) "struct nk_font_atlas *atlas; int i; nk_glfw3_font_stash_begin(&atlas); for (i = 0; i < size; i++) {C_word pair = (C_word) data[i]; char *font_name = C_c_string(C_u_i_car(pair)); int font_size = C_unfix(C_u_i_cdr(pair)); nk_font_atlas_add_from_file(atlas, font_name, font_size, 0);} nk_glfw3_font_stash_end();"))
+(define nk_glfw3_init (foreign-lambda (nonnull-c-pointer (struct "nk_context")) "nk_glfw3_init" (c-pointer (struct "GLFWwindow")) (enum "nk_glfw_init_state")))
+(define nk_glfw3_init_font (foreign-lambda* bool (((c-pointer (struct "nk_context")) ctx) (scheme-object data)) "struct nk_font_atlas *atlas; struct nk_font *font; nk_glfw3_font_stash_begin(&atlas); if (C_truep(data)) {C_word pair = (C_word) data; char *font_name = C_c_string(C_u_i_car(pair)); int font_size = C_unfix(C_u_i_cdr(pair)); font = nk_font_atlas_add_from_file(atlas, font_name, font_size, 0);} nk_glfw3_font_stash_end(); if (!font) C_return(0); nk_style_set_font(ctx, &font->handle); C_return(1);"))
 (define nk_glfw3_new_frame (foreign-lambda void "nk_glfw3_new_frame"))
 (define nk_glfw3_render (foreign-lambda void "nk_glfw3_render" (enum "nk_anti_aliasing") int int))
 (define nk_glfw3_shutdown (foreign-lambda void "nk_glfw3_shutdown"))
@@ -55,14 +67,12 @@
                     NK_GLFW3_DEFAULT)))
       (make-context (nk_glfw3_init window flag)))))
 
-(define (font->pair font)
-  (cons (font-filename font) (font-size font)))
-
-(define (init-fonts! #!rest fonts)
-  (let* ((font-pairs (map font->pair fonts))
-         (data (apply pointer-vector (map object->pointer font-pairs)))
-         (size (pointer-vector-length data)))
-    (nk_glfw3_init_fonts data size)))
+(define (init-font! #!optional context path size)
+  (let ((ret (if (and context path size)
+                 (nk_glfw3_init_font (context-pointer context) (cons path size))
+                 (nk_glfw3_init_font #f #f))))
+    (when (not ret)
+      (abort (nuklear-error "Failed initializing font" 'init-font!)))))
 
 (define new-frame nk_glfw3_new_frame)
 

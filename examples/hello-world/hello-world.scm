@@ -12,7 +12,7 @@
 (set!-values (width height) (glfw:get-window-size (glfw:window)))
 
 (define context (backend:init! (glfw:window) #t))
-(backend:init-fonts!)
+(backend:init-font!)
 
 (define quit? #f)
 (define show-greeting? #f)
