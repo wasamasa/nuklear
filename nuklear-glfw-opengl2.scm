@@ -72,7 +72,7 @@
                  (nk_glfw3_init_font (context-pointer context) (cons path size))
                  (nk_glfw3_init_font #f #f))))
     (when (not ret)
-      (abort (nuklear-error "Failed initializing font" 'init-font!)))))
+      (signal (nuklear-error "Failed initializing font" 'init-font!)))))
 
 (define new-frame nk_glfw3_new_frame)
 
