@@ -40,7 +40,7 @@
 ;;; foreign functions
 
 (define nk_glfw3_init (foreign-lambda (c-pointer (struct "nk_context")) "nk_glfw3_init" (c-pointer (struct "GLFWwindow")) (enum "nk_glfw_init_state")))
-(define nk_glfw3_init_fonts (foreign-lambda* void ((pointer-vector data) (int size)) "struct nk_font_atlas *atlas; nk_glfw3_font_stash_begin(&atlas); for (int i = 0; i < size; i++) {C_word pair = (C_word) data[i]; char *font_name = C_c_string(C_u_i_car(pair)); int font_size = C_unfix(C_u_i_cdr(pair)); nk_font_atlas_add_from_file(atlas, font_name, font_size, 0);} nk_glfw3_font_stash_end();"))
+(define nk_glfw3_init_fonts (foreign-lambda* void ((pointer-vector data) (int size)) "struct nk_font_atlas *atlas; int i; nk_glfw3_font_stash_begin(&atlas); for (i = 0; i < size; i++) {C_word pair = (C_word) data[i]; char *font_name = C_c_string(C_u_i_car(pair)); int font_size = C_unfix(C_u_i_cdr(pair)); nk_font_atlas_add_from_file(atlas, font_name, font_size, 0);} nk_glfw3_font_stash_end();"))
 (define nk_glfw3_new_frame (foreign-lambda void "nk_glfw3_new_frame"))
 (define nk_glfw3_render (foreign-lambda void "nk_glfw3_render" (enum "nk_anti_aliasing") int int))
 (define nk_glfw3_shutdown (foreign-lambda void "nk_glfw3_shutdown"))
