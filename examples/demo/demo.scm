@@ -18,13 +18,12 @@
 (backend:init-font!)
 ;; (backend:init-font! context "DroidSans.ttf" 15)
 
-(define quit? #f)
 (define hard? #f)
 (define property 20)
 (define background (nk:rgb->color 28 48 62))
 
 (let loop ()
-  (when (and (not (glfw:window-should-close (glfw:window))) (not quit?))
+  (when (and (not (glfw:window-should-close (glfw:window))))
     (glfw:poll-events)
     (backend:new-frame)
 
