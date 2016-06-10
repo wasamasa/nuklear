@@ -5,10 +5,11 @@
    window-begin window-end
    layout-row-dynamic layout-row-static
    label
-   button-label
+   button-text button-label
    option-label
    color-picker
    property-int
+   edit-string
    popup-begin popup-close popup-end
    combo-begin-color combo-end)
 
@@ -32,6 +33,99 @@
 <#
 
 ;;; enums
+
+;; enum nk_button_behavior
+(define NK_BUTTON_DEFAULT (foreign-value "NK_BUTTON_DEFAULT" int))
+(define NK_BUTTON_REPEATER (foreign-value "NK_BUTTON_REPEATER" int))
+
+;; enum nk_color_format
+(define NK_RGB (foreign-value "NK_RGB" int))
+(define NK_RGBA (foreign-value "NK_RGBA" int))
+
+;; enum nk_popup_type
+(define NK_POPUP_STATIC (foreign-value "NK_POPUP_STATIC" int))
+(define NK_POPUP_DYNAMIC (foreign-value "NK_POPUP_DYNAMIC" int))
+
+;; enum nk_text_alignment
+(define NK_TEXT_LEFT (foreign-value "NK_TEXT_LEFT" int))
+(define NK_TEXT_CENTERED (foreign-value "NK_TEXT_CENTERED" int))
+(define NK_TEXT_RIGHT (foreign-value "NK_TEXT_RIGHT" int))
+
+(define (label-alignment->int flag)
+  (case flag
+    ((left) NK_TEXT_LEFT)
+    ((centered) NK_TEXT_CENTERED)
+    ((right) NK_TEXT_RIGHT)))
+
+;; enum nk_edit_types
+(define NK_EDIT_SIMPLE (foreign-value "NK_EDIT_SIMPLE" int))
+(define NK_EDIT_FIELD (foreign-value "NK_EDIT_FIELD" int))
+(define NK_EDIT_BOX (foreign-value "NK_EDIT_BOX" int))
+(define NK_EDIT_EDITOR (foreign-value "NK_EDIT_EDITOR" int))
+
+(define (edit-type->int flag)
+  (case flag
+    ((simple) NK_EDIT_SIMPLE)
+    ((field) NK_EDIT_FIELD)
+    ((box) NK_EDIT_BOX)
+    ((editor) NK_EDIT_EDITOR)))
+
+;; enum nk_edit_flags
+(define NK_EDIT_DEFAULT (foreign-value "NK_EDIT_DEFAULT" int))
+(define NK_EDIT_READ_ONLY (foreign-value "NK_EDIT_READ_ONLY" int))
+(define NK_EDIT_AUTO_SELECT (foreign-value "NK_EDIT_AUTO_SELECT" int))
+(define NK_EDIT_SIG_ENTER (foreign-value "NK_EDIT_SIG_ENTER" int))
+(define NK_EDIT_ALLOW_TAB (foreign-value "NK_EDIT_ALLOW_TAB" int))
+(define NK_EDIT_NO_CURSOR (foreign-value "NK_EDIT_NO_CURSOR" int))
+(define NK_EDIT_SELECTABLE (foreign-value "NK_EDIT_SELECTABLE" int))
+(define NK_EDIT_CLIPBOARD (foreign-value "NK_EDIT_CLIPBOARD" int))
+(define NK_EDIT_CTRL_ENTER_NEWLINE (foreign-value "NK_EDIT_CTRL_ENTER_NEWLINE" int))
+(define NK_EDIT_NO_HORIZONTAL_SCROLL (foreign-value "NK_EDIT_NO_HORIZONTAL_SCROLL" int))
+(define NK_EDIT_ALWAYS_INSERT_MODE (foreign-value "NK_EDIT_ALWAYS_INSERT_MODE" int))
+(define NK_EDIT_MULTILINE (foreign-value "NK_EDIT_MULTILINE" int))
+
+(define (edit-flag->int flag)
+  (case flag
+    ((default) NK_EDIT_DEFAULT)
+    ((read-only) NK_EDIT_READ_ONLY)
+    ((auto-select) NK_EDIT_AUTO_SELECT)
+    ((sig-enter) NK_EDIT_SIG_ENTER)
+    ((allow-tab) NK_EDIT_ALLOW_TAB)
+    ((no-cursor) NK_EDIT_NO_CURSOR)
+    ((selectable) NK_EDIT_SELECTABLE)
+    ((clipboard) NK_EDIT_CLIPBOARD)
+    ((ctrl-enter-newline) NK_EDIT_CTRL_ENTER_NEWLINE)
+    ((no-horizontal-scroll) NK_EDIT_NO_HORIZONTAL_SCROLL)
+    ((always-insert-mode) NK_EDIT_ALWAYS_INSERT_MODE)
+    ((multiline) NK_EDIT_MULTILINE)))
+
+(define (edit-flags->int flags)
+  (apply bitwise-ior (map edit-flag->int flags)))
+
+;; enum nk_edit_events
+(define NK_EDIT_ACTIVE (foreign-value "NK_EDIT_ACTIVE" int))
+(define NK_EDIT_INACTIVE (foreign-value "NK_EDIT_INACTIVE" int))
+(define NK_EDIT_ACTIVATED (foreign-value "NK_EDIT_ACTIVATED" int))
+(define NK_EDIT_DEACTIVATED (foreign-value "NK_EDIT_DEACTIVATED" int))
+(define NK_EDIT_COMMITED (foreign-value "NK_EDIT_COMMITED" int))
+
+(define (int->edit-event value)
+  (select value
+    ((0) #f)
+    ((NK_EDIT_ACTIVE) 'active)
+    ((NK_EDIT_INACTIVE) 'inactive)
+    ((NK_EDIT_ACTIVATED) 'activated)
+    ((NK_EDIT_DEACTIVATED) 'deactivated)
+    ((NK_EDIT_COMMITED) 'commited)))
+
+(define (int->edit-events value)
+  (let loop ((flag 1) (events '()))
+    (if (<= flag value)
+        (let ((match? (not (zero? (bitwise-and value flag)))))
+          (if match?
+              (loop (* flag 2) (cons (int->edit-event flag) events))
+              (loop (* flag 2) events)))
+        events)))
 
 ;; enum nk_panel_flags
 (define NK_WINDOW_BORDER (foreign-value "NK_WINDOW_BORDER" int))
@@ -59,28 +153,36 @@
 (define (window-flags->int flags)
   (apply bitwise-ior (map window-flag->int flags)))
 
-;; enum nk_button_behavior
-(define NK_BUTTON_DEFAULT (foreign-value "NK_BUTTON_DEFAULT" int))
-(define NK_BUTTON_REPEATER (foreign-value "NK_BUTTON_REPEATER" int))
+;; custom filter enum
+#>
+enum nk_filter_type {
+    NK_FILTER_TYPE_DEFAULT,
+    NK_FILTER_TYPE_ASCII,
+    NK_FILTER_TYPE_FLOAT,
+    NK_FILTER_TYPE_DECIMAL,
+    NK_FILTER_TYPE_HEX,
+    NK_FILTER_TYPE_OCT,
+    NK_FILTER_TYPE_BINARY
+};
+<#
 
-;; enum nk_color_format
-(define NK_RGB (foreign-value "NK_RGB" int))
-(define NK_RGBA (foreign-value "NK_RGBA" int))
+(define NK_FILTER_TYPE_DEFAULT (foreign-value "NK_FILTER_TYPE_DEFAULT" int))
+(define NK_FILTER_TYPE_ASCII (foreign-value "NK_FILTER_TYPE_ASCII" int))
+(define NK_FILTER_TYPE_FLOAT (foreign-value "NK_FILTER_TYPE_FLOAT" int))
+(define NK_FILTER_TYPE_DECIMAL (foreign-value "NK_FILTER_TYPE_DECIMAL" int))
+(define NK_FILTER_TYPE_HEX (foreign-value "NK_FILTER_TYPE_HEX" int))
+(define NK_FILTER_TYPE_OCT (foreign-value "NK_FILTER_TYPE_OCT" int))
+(define NK_FILTER_TYPE_BINARY (foreign-value "NK_FILTER_TYPE_BINARY" int))
 
-;; enum nk_popup_type
-(define NK_POPUP_STATIC (foreign-value "NK_POPUP_STATIC" int))
-(define NK_POPUP_DYNAMIC (foreign-value "NK_POPUP_DYNAMIC" int))
-
-;; enum nk_text_alignment
-(define NK_TEXT_LEFT (foreign-value "NK_TEXT_LEFT" int))
-(define NK_TEXT_CENTERED (foreign-value "NK_TEXT_CENTERED" int))
-(define NK_TEXT_RIGHT (foreign-value "NK_TEXT_RIGHT" int))
-
-(define (label-alignment->int flag)
+(define (filter-flag->int flag)
   (case flag
-    ((left) NK_TEXT_LEFT)
-    ((centered) NK_TEXT_CENTERED)
-    ((right) NK_TEXT_RIGHT)))
+    ((default) NK_FILTER_TYPE_DEFAULT)
+    ((ascii) NK_FILTER_TYPE_ASCII)
+    ((float) NK_FILTER_TYPE_FLOAT)
+    ((decimal) NK_FILTER_TYPE_DECIMAL)
+    ((hex) NK_FILTER_TYPE_HEX)
+    ((oct) NK_FILTER_TYPE_OCT)
+    ((binary) NK_FILTER_TYPE_BINARY)))
 
 ;;; typedefs
 
@@ -89,6 +191,7 @@
 (define-foreign-type nk_rect* (nonnull-c-pointer (struct "nk_rect")))
 (define-foreign-type nk_color* (nonnull-c-pointer (struct "nk_color")))
 (define-foreign-type nk_flags unsigned-int32)
+(define-foreign-type nk_flags* (nonnull-c-pointer nk_flags))
 (define-foreign-type uint8* (nonnull-c-pointer unsigned-byte))
 (define-foreign-type uint8 unsigned-byte)
 (define-foreign-type float* (nonnull-c-pointer float))
@@ -162,9 +265,6 @@
 
 ;;; foreign functions
 
-;; utils
-(define nk_color_f (foreign-lambda* void ((float* r) (float* g) (float* b) (float* a) (nk_color* c)) "nk_color_f(r, g, b, a, *c);"))
-
 ;; window
 (define nk_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) (nonnull-c-string title) (nk_rect* bounds) (nk_flags flags)) "C_return(nk_begin(ctx, layout, title, *bounds, flags));"))
 (define nk_end (foreign-lambda void "nk_end" nk_context*))
@@ -177,6 +277,7 @@
 (define nk_label (foreign-lambda void "nk_label" nk_context* nonnull-c-string nk_flags))
 
 ;; button
+(define nk_button_text (foreign-lambda bool "nk_button_text" nk_context* nonnull-c-string int (enum "nk_button_behavior")))
 (define nk_button_label (foreign-lambda bool "nk_button_label" nk_context* nonnull-c-string (enum "nk_button_behavior")))
 
 ;; radio
@@ -188,6 +289,23 @@
 ;; property
 (define nk_propertyi (foreign-lambda int "nk_propertyi" nk_context* nonnull-c-string int int int int int))
 
+;; textedit
+(define nk_edit_string (foreign-lambda* c-string ((nk_context* ctx) (nk_flags edit_flags) (nonnull-c-string text) (int len) (blob buffer) (int max) (nk_flags* edit_value) (int filter_flag))
+                         "strncpy(buffer, text, max);"
+                         "int (*filter)(const struct nk_text_edit*, nk_rune);"
+                         "switch(filter_flag) {"
+                         "  case NK_FILTER_TYPE_DEFAULT : filter = nk_filter_default; break;"
+                         "  case NK_FILTER_TYPE_ASCII : filter = nk_filter_ascii; break;"
+                         "  case NK_FILTER_TYPE_FLOAT : filter = nk_filter_float; break;"
+                         "  case NK_FILTER_TYPE_DECIMAL : filter = nk_filter_decimal; break;"
+                         "  case NK_FILTER_TYPE_HEX : filter = nk_filter_hex; break;"
+                         "  case NK_FILTER_TYPE_OCT : filter = nk_filter_oct; break;"
+                         "  case NK_FILTER_TYPE_BINARY : filter = nk_filter_binary; break;"
+                         "}"
+                         "*edit_value = nk_edit_string(ctx, edit_flags, buffer, &len, max, filter);"
+                         "buffer[len] = 0;"
+                         "C_return(buffer);"))
+
 ;; popup
 (define nk_popup_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) ((enum "nk_popup_type") type) (nonnull-c-string title) (nk_flags flags) (nk_rect* rect)) "C_return(nk_popup_begin(ctx, layout, type, title, flags, *rect));"))
 (define nk_popup_close (foreign-lambda void "nk_popup_close" nk_context*))
@@ -196,6 +314,9 @@
 ;; combo box
 (define nk_combo_begin_color (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) (nk_color* c) (int max_height)) "C_return(nk_combo_begin_color(ctx, layout, *c, max_height));"))
 (define nk_combo_end (foreign-lambda void "nk_combo_end" nk_context*))
+
+;; utils
+(define nk_color_f (foreign-lambda* void ((float* r) (float* g) (float* b) (float* a) (nk_color* c)) "nk_color_f(r, g, b, a, *c);"))
 
 ;;; API
 
@@ -235,6 +356,13 @@
         (flag (label-alignment->int alignment)))
     (nk_label context* text flag)))
 
+(define (button-text context text length #!optional repeater?)
+  (let ((context* (context-pointer context))
+        (flag (if repeater?
+                  NK_BUTTON_REPEATER
+                  NK_BUTTON_DEFAULT)))
+    (nk_button_text context* text length flag)))
+
 (define (button-label context text #!optional repeater?)
   (let ((context* (context-pointer context))
         (flag (if repeater?
@@ -260,6 +388,19 @@
 (define (property-int context text min value max step pixel-step)
   (let ((context* (context-pointer context)))
     (nk_propertyi context* text min value max step pixel-step)))
+
+(define (edit-string context edit-type-or-flags text max #!optional filter-flag)
+  (let ((context* (context-pointer context))
+        (edit-flags (if (symbol? edit-type-or-flags)
+                        (edit-type->int edit-type-or-flags)
+                        (edit-flags->int edit-type-or-flags)))
+        (len (string-length text))
+        (buffer (make-blob max))
+        (filter-value (filter-flag->int (or filter-flag 'default))))
+    (let-location ((edit-value nk_flags))
+      (let ((ret (nk_edit_string context* edit-flags text len buffer max
+                                 (location edit-value) filter-value)))
+        (values ret (int->edit-events edit-value))))))
 
 (define (popup-begin context layout dynamic? title flags rect)
   (let ((context* (context-pointer context))
