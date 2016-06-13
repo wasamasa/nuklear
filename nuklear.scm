@@ -14,7 +14,7 @@
    layout-space-bounds layout-space-to-screen layout-space-rect-to-screen layout-space-rect-to-local
    group-begin group-end
    label
-   button-text button-label button-color
+   button-label button-color
    option-label
    color-picker
    property-int
@@ -469,7 +469,6 @@ enum nk_filter_type {
 (define nk_label (foreign-lambda void "nk_label" nk_context* nonnull-c-string nk_flags))
 
 ;; button
-(define nk_button_text (foreign-lambda bool "nk_button_text" nk_context* nonnull-c-string int (enum "nk_button_behavior")))
 (define nk_button_label (foreign-lambda bool "nk_button_label" nk_context* nonnull-c-string (enum "nk_button_behavior")))
 (define nk_button_color (foreign-lambda* bool ((nk_context* ctx) (nk_color* color) ((enum "nk_button_behavior") flag)) "C_return(nk_button_color(ctx, *color, flag));"))
 
@@ -634,13 +633,6 @@ enum nk_filter_type {
   (let ((context* (context-pointer context))
         (flag (text-alignment->int alignment)))
     (nk_label context* text flag)))
-
-(define (button-text context text length #!optional repeater?)
-  (let ((context* (context-pointer context))
-        (flag (if repeater?
-                  NK_BUTTON_REPEATER
-                  NK_BUTTON_DEFAULT)))
-    (nk_button_text context* text length flag)))
 
 (define (button-label context text #!optional repeater?)
   (let ((context* (context-pointer context))
