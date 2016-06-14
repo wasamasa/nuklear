@@ -446,7 +446,7 @@ enum nk_filter_type {
 
 (define nk_window_get_canvas (foreign-lambda nk_command_buffer* "nk_window_get_canvas" nk_context*))
 
-(define nk_window_is_closed (foreign-lambda bool "nk_window_is_closed" nk_context* (const nonnull-c-string)))
+(define nk_window_is_closed (foreign-lambda bool "nk_window_is_closed" nk_context* nonnull-c-string))
 
 ;; layout
 (define nk_layout_row_dynamic (foreign-lambda void "nk_layout_row_dynamic" nk_context* float int))
@@ -462,7 +462,7 @@ enum nk_filter_type {
 (define nk_layout_space_rect_to_local (foreign-lambda* void ((nk_context* ctx) (nk_rect* in) (nk_rect* out)) "*out = nk_layout_space_rect_to_local(ctx, *in);"))
 
 ;; group
-(define nk_group_begin (foreign-lambda bool "nk_group_begin" nk_context* nk_panel* (const nonnull-c-string) nk_flags))
+(define nk_group_begin (foreign-lambda bool "nk_group_begin" nk_context* nk_panel* nonnull-c-string nk_flags))
 (define nk_group_end (foreign-lambda void "nk_group_end" nk_context*))
 
 ;; widget
@@ -509,7 +509,7 @@ enum nk_filter_type {
 
 ;; contextual
 (define nk_contextual_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) (nk_flags flags) (nk_vec2* vec2) (nk_rect* rect)) "C_return(nk_contextual_begin(ctx, layout, flags, *vec2, *rect));"))
-(define nk_contextual_item_label (foreign-lambda bool "nk_contextual_item_label" nk_context* (const nonnull-c-string) nk_flags))
+(define nk_contextual_item_label (foreign-lambda bool "nk_contextual_item_label" nk_context* nonnull-c-string nk_flags))
 (define nk_contextual_end (foreign-lambda void "nk_contextual_end" nk_context*))
 
 ;; utils
