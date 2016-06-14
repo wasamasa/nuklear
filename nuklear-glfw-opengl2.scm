@@ -52,7 +52,24 @@
 ;;; foreign functions
 
 (define nk_glfw3_init (foreign-lambda (nonnull-c-pointer (struct "nk_context")) "nk_glfw3_init" (c-pointer (struct "GLFWwindow")) (enum "nk_glfw_init_state")))
-(define nk_glfw3_init_font (foreign-lambda* bool (((c-pointer (struct "nk_context")) ctx) (scheme-object data)) "struct nk_font_atlas *atlas; struct nk_font *font = 0; int is_default = !C_truep(data); nk_glfw3_font_stash_begin(&atlas); if (!is_default) {C_word pair = (C_word) data; char *font_name = C_c_string(C_u_i_car(pair)); int font_size = C_unfix(C_u_i_cdr(pair)); font = nk_font_atlas_add_from_file(atlas, font_name, font_size, 0);} nk_glfw3_font_stash_end(); if (font) nk_style_set_font(ctx, &font->handle); if (is_default || font) C_return(1); else C_return(0);"))
+(define nk_glfw3_init_font (foreign-lambda* bool (((c-pointer (struct "nk_context")) ctx) (scheme-object data))
+                             "struct nk_font_atlas *atlas;"
+                             "struct nk_font *font = 0;"
+                             "int is_default = !C_truep(data);"
+                             "nk_glfw3_font_stash_begin(&atlas);"
+                             "if (!is_default) {"
+                             "  C_word pair = (C_word) data;"
+                             "  char *font_name = C_c_string(C_u_i_car(pair));"
+                             "  int font_size = C_unfix(C_u_i_cdr(pair));"
+                             "  font = nk_font_atlas_add_from_file(atlas, font_name, font_size, 0);"
+                             "}"
+                             "nk_glfw3_font_stash_end();"
+                             "if (font)"
+                             "  nk_style_set_font(ctx, &font->handle);"
+                             "if (is_default || font)"
+                             "  C_return(1);"
+                             "else"
+                             "  C_return(0);"))
 (define nk_glfw3_new_frame (foreign-lambda void "nk_glfw3_new_frame"))
 (define nk_glfw3_render (foreign-lambda void "nk_glfw3_render" (enum "nk_anti_aliasing") int int))
 (define nk_glfw3_shutdown (foreign-lambda void "nk_glfw3_shutdown"))
