@@ -1,0 +1,55 @@
+* Generic upstream bugs
+
+- optional defines aren't really optional and lead to compilation
+  errors/warnings
+
+* UI bugs
+
+- dragging can change what widget is dragged currently...
+- wrapped text not displayed in popup
+- when you resize a window to be as small as possible, several things
+  happen (as demonstrated in the overview demo):
+  - text overflow
+  - scrollbar overflow
+  - widget overlap (window flag checkboxes)
+- overview demo: enabled scrollbar takes space even when not visible
+- checkbox state is not obvious (why no x or at least more padding
+  like with options?)
+- resizing triangle could use a more forgiving hitbox (dragging by the
+  border does *not* work)
+- edit box behaves weirdly (cursor form changes depending where you
+  click, typing lots makes the text go invisible except for the end)
+- more repeatable behavior please! (edit box, combo box properties)
+- allow for overshoot (like when dragging beyond the end of a
+  progressbar)
+- allow for click in empty scrollbar area
+- resizer disappears when opening any combobox
+- combo box can only be closed by clicking space outside it (as
+  opposed to clicking on the picked item)
+- slider does not get adjusted when clicking on another location, only
+  by dragging
+
+* Demo bugs
+
+- X button in demos does respawn them...
+- dead code in node editor demo (selected)
+- node editor grid moves into the other direction when dragging
+  top-level window
+- silly/wrong labelf usage in overview demo
+
+* Wishlist items
+
+- documentation (on widget/layout behavior please, not reiterating
+  function signatures)
+- the level of detail for that commentary should be comparable to the
+  combobox comment in overview.c
+- backend image support (currently there's only lots of opengl3
+  boilerplate code in the example directory)
+- code with multiple option widgets is hard to read and pretty much
+  requires enums or numeric bools (which are not a Scheme thing...)
+
+* Egg changes
+
+- add more (user) error handling
+- consider defining tunable for button triggering (on key up)
+

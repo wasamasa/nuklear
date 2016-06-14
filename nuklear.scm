@@ -35,8 +35,6 @@
 (import chicken scheme foreign)
 (use lolevel)
 
-;; TODO: report upstream bug regarding headers (removing not strictly
-;; necessary ones leads to compilation errors and warnings)
 
 #>
 #define NK_INCLUDE_FIXED_TYPES
