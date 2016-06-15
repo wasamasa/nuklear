@@ -36,6 +36,12 @@
 - node editor grid moves into the other direction when dragging
   top-level window
 - silly/wrong labelf usage in overview demo
+- second/minute upper bounds are wrong in overview demo
+- typos in month names in overview demo
+- bounds mostly unused in charts in overview demo
+- line_index not used in first chart example (as opposed to second)
+- typos in popup in overview demo
+- "Group_buttom"
 
 * Wishlist items
 
