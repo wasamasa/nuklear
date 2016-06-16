@@ -1,5 +1,6 @@
 (module nuklear-glfw-opengl2
-  (init! init-font! new-frame render! shutdown!)
+  (anti-alias? max-vertex-buffer max-element-buffer
+   init! init-font! new-frame render! shutdown!)
 
 (import chicken scheme foreign)
 
