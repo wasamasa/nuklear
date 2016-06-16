@@ -167,7 +167,7 @@
                                                 (+ (nk:rect-y circle) 3)))
                               (l0-x (nk:vec2-x l0))
                               (l0-y (nk:vec2-y l0))
-                              (l1 (nk:mouse-pos (nk:input-mouse input)))
+                              (l1 (nk:mouse-position (nk:input-mouse input)))
                               (l1-x (nk:vec2-x l1))
                               (l1-y (nk:vec2-y l1)))
                          (nk:stroke-curve

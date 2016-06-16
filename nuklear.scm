@@ -40,7 +40,7 @@
    fill-circle
 
    context-style style-window-border style-window-header-align-set!
-   context-input input-mouse mouse-delta mouse-pos
+   context-input input-mouse mouse-delta mouse-position
    input-mouse-click-down-in-rect? input-mouse-hovering-in-rect? input-mouse-previously-hovering-in-rect? input-mouse-clicked? input-mouse-down? input-mouse-released?)
 
 (import chicken scheme foreign)
@@ -372,14 +372,14 @@ enum nk_filter_type {
      mouse* delta*)
     delta))
 
-(define (mouse-pos mouse)
+(define (mouse-position mouse)
   (let* ((mouse* (mouse-pointer mouse))
-         (pos (make-vec2 0 0))
-         (pos* (nk_vec2-pointer pos)))
+         (position (make-vec2 0 0))
+         (position* (nk_vec2-pointer position)))
     ((foreign-lambda* void ((nk_mouse* mouse) (nk_vec2* out))
        "*out = mouse->pos;")
-     mouse* pos*)
-    pos))
+     mouse* position*)
+    position))
 
 ;;; stack-allocation helpers
 
