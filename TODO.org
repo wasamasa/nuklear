@@ -59,4 +59,6 @@
 
 - add more (user) error handling
 - consider defining tunable for button triggering (on key up)
+- figure out string corruption in =nk:combo=
+- figure out why time picker is broken
 
