@@ -1,5 +1,5 @@
 (module nuklear-glfw-opengl2
-  (init! make-font init-font! new-frame render! shutdown!)
+  (init! init-font! new-frame render! shutdown!)
 
 (import chicken scheme foreign)
 
