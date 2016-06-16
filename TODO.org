@@ -42,6 +42,7 @@
 - line_index not used in first chart example (as opposed to second)
 - typos in popup in overview demo
 - "Group_buttom"
+- NK_WINDOW_NO_SCROLLBAR used twice in vsplit part of overview demo
 
 * Wishlist items
 
