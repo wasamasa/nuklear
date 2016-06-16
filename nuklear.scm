@@ -10,31 +10,41 @@
    window-canvas
    window-closed?
    layout-row-dynamic layout-row-static
+   layout-row-begin layout-row-push layout-row-end layout-row
    layout-space-begin layout-space-end layout-space-push
    layout-space-bounds layout-space-to-screen layout-space-rect-to-screen layout-space-rect-to-local
    group-begin group-end
-   label
-   button-label button-color
+   tree-push tree-pop
+   label label-colored label-wrap
+   button-label button-color button-symbol button-symbol-label
+   checkbox-label
    option-label
+   selectable-label
+   slider-float slider-int
+   progressbar
    color-picker
-   property-int
+   property-float property-int
    edit-string
+   chart-begin chart-begin-colored chart-push chart-push-slot chart-add-slot chart-add-slot-colored chart-end
    popup-begin popup-close popup-end
-   combo-begin-color combo-end
+   combo combo-begin-label combo-begin-color combo-close combo-end
    contextual-begin contextual-item-label contextual-end
+   tooltip
+   menubar-begin menubar-end menu-begin-label menu-item-label menu-end
 
+   widget-bounds spacing
    rgb->color color->rgba-floats
+   hsva->color color->hsva-ints
 
    stroke-line stroke-curve
    fill-circle
 
-   context-style style-window-border
+   context-style style-window-border style-window-header-align-set!
    context-input input-mouse mouse-delta mouse-pos
-   input-mouse-click-down-in-rect? input-mouse-hovering-in-rect? input-mouse-clicked? input-mouse-down? input-mouse-released?)
+   input-mouse-click-down-in-rect? input-mouse-hovering-in-rect? input-mouse-previously-hovering-in-rect? input-mouse-clicked? input-mouse-down? input-mouse-released?)
 
 (import chicken scheme foreign)
-(use lolevel)
-
+(use lolevel data-structures)
 
 #>
 #define NK_INCLUDE_FIXED_TYPES
@@ -50,9 +60,43 @@
 
 ;;; enums
 
+(define (int->events value event-proc)
+  (let loop ((flag 1) (events '()))
+    (if (<= flag value)
+        (let ((match? (not (zero? (bitwise-and value flag)))))
+          (if match?
+              (loop (* flag 2) (cons (event-proc flag) events))
+              (loop (* flag 2) events)))
+        events)))
+
 ;; enum nk_button_behavior
 (define NK_BUTTON_DEFAULT (foreign-value "NK_BUTTON_DEFAULT" int))
 (define NK_BUTTON_REPEATER (foreign-value "NK_BUTTON_REPEATER" int))
+
+;; enum nk_modify
+(define NK_FIXED (foreign-value "NK_FIXED" int))
+(define NK_MODIFIABLE (foreign-value "NK_MODIFIABLE" int))
+
+;; enum nk_collapse_states
+(define NK_MINIMIZED (foreign-value "NK_MINIMIZED" int))
+(define NK_MAXIMIZED (foreign-value "NK_MAXIMIZED" int))
+
+;; enum nk_chart_type
+(define NK_CHART_LINES (foreign-value "NK_CHART_LINES" int))
+(define NK_CHART_COLUMN (foreign-value "NK_CHART_COLUMN" int))
+
+;; enum nk_chart_event
+(define NK_CHART_HOVERING (foreign-value "NK_CHART_HOVERING" int))
+(define NK_CHART_CLICKED (foreign-value "NK_CHART_CLICKED" int))
+
+(define (int->chart-event value)
+  (select value
+    ((0) #f)
+    ((NK_CHART_HOVERING) 'hovering)
+    ((NK_CHART_CLICKED) 'clicked)))
+
+(define (int->chart-events value)
+  (int->events value int->chart-event))
 
 ;; enum nk_color_format
 (define NK_RGB (foreign-value "NK_RGB" int))
@@ -66,11 +110,45 @@
 (define NK_DYNAMIC (foreign-value "NK_DYNAMIC" int))
 (define NK_STATIC (foreign-value "NK_STATIC" int))
 
+;; enum nk_tree_type
+(define NK_TREE_NODE (foreign-value "NK_TREE_NODE" int))
+(define NK_TREE_TAB (foreign-value "NK_TREE_TAB" int))
+
+;; enum nk_symbol_type
+(define NK_SYMBOL_NONE (foreign-value "NK_SYMBOL_NONE" int))
+(define NK_SYMBOL_X (foreign-value "NK_SYMBOL_X" int))
+(define NK_SYMBOL_UNDERSCORE (foreign-value "NK_SYMBOL_UNDERSCORE" int))
+(define NK_SYMBOL_CIRCLE (foreign-value "NK_SYMBOL_CIRCLE" int))
+(define NK_SYMBOL_CIRCLE_FILLED (foreign-value "NK_SYMBOL_CIRCLE_FILLED" int))
+(define NK_SYMBOL_RECT (foreign-value "NK_SYMBOL_RECT" int))
+(define NK_SYMBOL_RECT_FILLED (foreign-value "NK_SYMBOL_RECT_FILLED" int))
+(define NK_SYMBOL_TRIANGLE_UP (foreign-value "NK_SYMBOL_TRIANGLE_UP" int))
+(define NK_SYMBOL_TRIANGLE_DOWN (foreign-value "NK_SYMBOL_TRIANGLE_DOWN" int))
+(define NK_SYMBOL_TRIANGLE_LEFT (foreign-value "NK_SYMBOL_TRIANGLE_LEFT" int))
+(define NK_SYMBOL_TRIANGLE_RIGHT (foreign-value "NK_SYMBOL_TRIANGLE_RIGHT" int))
+(define NK_SYMBOL_PLUS (foreign-value "NK_SYMBOL_PLUS" int))
+(define NK_SYMBOL_MINUS (foreign-value "NK_SYMBOL_MINUS" int))
+
+(define (symbol->int flag)
+  (case flag
+    ((none) NK_SYMBOL_NONE)
+    ((x) NK_SYMBOL_X)
+    ((underscore) NK_SYMBOL_UNDERSCORE)
+    ((circle) NK_SYMBOL_CIRCLE)
+    ((circle-filled) NK_SYMBOL_CIRCLE_FILLED)
+    ((rect) NK_SYMBOL_RECT)
+    ((rect-filled) NK_SYMBOL_RECT_FILLED)
+    ((triangle-up) NK_SYMBOL_TRIANGLE_UP)
+    ((triangle-down) NK_SYMBOL_TRIANGLE_DOWN)
+    ((triangle-left) NK_SYMBOL_TRIANGLE_LEFT)
+    ((triangle-right) NK_SYMBOL_TRIANGLE_RIGHT)
+    ((plus) NK_SYMBOL_PLUS)
+    ((minus) NK_SYMBOL_MINUS)))
+
 ;; enum nk_buttons
 (define NK_BUTTON_LEFT (foreign-value "NK_BUTTON_LEFT" int))
 (define NK_BUTTON_MIDDLE (foreign-value "NK_BUTTON_MIDDLE" int))
 (define NK_BUTTON_RIGHT (foreign-value "NK_BUTTON_RIGHT" int))
-;; (define NK_BUTTON_MAX (foreign-value "NK_BUTTON_MAX" int))
 
 (define (button->int flag)
   (case flag
@@ -95,13 +173,6 @@
 (define NK_EDIT_BOX (foreign-value "NK_EDIT_BOX" int))
 (define NK_EDIT_EDITOR (foreign-value "NK_EDIT_EDITOR" int))
 
-(define (edit-type->int flag)
-  (case flag
-    ((simple) NK_EDIT_SIMPLE)
-    ((field) NK_EDIT_FIELD)
-    ((box) NK_EDIT_BOX)
-    ((editor) NK_EDIT_EDITOR)))
-
 ;; enum nk_edit_flags
 (define NK_EDIT_DEFAULT (foreign-value "NK_EDIT_DEFAULT" int))
 (define NK_EDIT_READ_ONLY (foreign-value "NK_EDIT_READ_ONLY" int))
@@ -118,6 +189,11 @@
 
 (define (edit-flag->int flag)
   (case flag
+    ((simple) NK_EDIT_SIMPLE)
+    ((field) NK_EDIT_FIELD)
+    ((box) NK_EDIT_BOX)
+    ((editor) NK_EDIT_EDITOR)
+
     ((default) NK_EDIT_DEFAULT)
     ((read-only) NK_EDIT_READ_ONLY)
     ((auto-select) NK_EDIT_AUTO_SELECT)
@@ -139,7 +215,8 @@
 (define NK_EDIT_INACTIVE (foreign-value "NK_EDIT_INACTIVE" int))
 (define NK_EDIT_ACTIVATED (foreign-value "NK_EDIT_ACTIVATED" int))
 (define NK_EDIT_DEACTIVATED (foreign-value "NK_EDIT_DEACTIVATED" int))
-(define NK_EDIT_COMMITED (foreign-value "NK_EDIT_COMMITED" int))
+;; TODO: fix typo upstream
+(define NK_EDIT_COMMITTED (foreign-value "NK_EDIT_COMMITED" int))
 
 (define (int->edit-event value)
   (select value
@@ -148,16 +225,10 @@
     ((NK_EDIT_INACTIVE) 'inactive)
     ((NK_EDIT_ACTIVATED) 'activated)
     ((NK_EDIT_DEACTIVATED) 'deactivated)
-    ((NK_EDIT_COMMITED) 'commited)))
+    ((NK_EDIT_COMMITTED) 'committed)))
 
 (define (int->edit-events value)
-  (let loop ((flag 1) (events '()))
-    (if (<= flag value)
-        (let ((match? (not (zero? (bitwise-and value flag)))))
-          (if match?
-              (loop (* flag 2) (cons (int->edit-event flag) events))
-              (loop (* flag 2) events)))
-        events)))
+  (int->events value int->edit-event))
 
 ;; enum nk_panel_flags
 (define NK_WINDOW_BORDER (foreign-value "NK_WINDOW_BORDER" int))
@@ -184,6 +255,12 @@
 
 (define (window-flags->int flags)
   (apply bitwise-ior (map window-flag->int flags)))
+
+(define (window-flag-or-flags->int flag-or-flags)
+  (cond
+   ((or (null? flag-or-flags) (not flag-or-flags)) 0)
+   ((symbol? flag-or-flags) (window-flag->int flag-or-flags))
+   ((pair? flag-or-flags) (window-flags->int flag-or-flags))))
 
 ;; custom filter enum
 #>
@@ -216,8 +293,13 @@ enum nk_filter_type {
     ((oct) NK_FILTER_TYPE_OCT)
     ((binary) NK_FILTER_TYPE_BINARY)))
 
+;; enum nk_style_header_align
+(define NK_HEADER_LEFT (foreign-value "NK_HEADER_LEFT" int))
+(define NK_HEADER_RIGHT (foreign-value "NK_HEADER_RIGHT" int))
+
 ;;; typedefs
 
+;; TODO: consider adding nonnull-c-string (as string?)
 (define-foreign-type nk_context* (nonnull-c-pointer (struct "nk_context")))
 (define-foreign-type nk_command_buffer* (nonnull-c-pointer (struct "nk_command_buffer")))
 (define-foreign-type nk_input* (nonnull-c-pointer (struct "nk_input")))
@@ -229,9 +311,12 @@ enum nk_filter_type {
 (define-foreign-type nk_vec2* (nonnull-c-pointer (struct "nk_vec2")))
 (define-foreign-type nk_flags unsigned-int32)
 (define-foreign-type nk_flags* (nonnull-c-pointer nk_flags))
+(define-foreign-type nk_size unsigned-long)
+(define-foreign-type nk_size* (nonnull-c-pointer nk_size))
 (define-foreign-type uint8* (nonnull-c-pointer unsigned-byte))
 (define-foreign-type uint8 unsigned-byte)
 (define-foreign-type float* (nonnull-c-pointer float))
+(define-foreign-type int* (nonnull-c-pointer int))
 
 ;;; auxiliary records
 
@@ -256,6 +341,13 @@ enum nk_filter_type {
     ((foreign-lambda* float ((nk_style* style))
        "C_return(style->window.border);")
      style*)))
+
+(define (style-window-header-align-set! style right?)
+  (let ((style* (style-pointer style))
+        (flag (if right? NK_HEADER_RIGHT NK_HEADER_LEFT)))
+    ((foreign-lambda* void ((nk_style* style) ((enum "nk_style_header_align") flag))
+       "style->window.header.align = flag;")
+     style* flag)))
 
 (define (context-input context)
   (let* ((context* (context-pointer context))
@@ -300,6 +392,7 @@ enum nk_filter_type {
 (define nk_rect-size (foreign-type-size (struct "nk_rect")))
 (define nk_color-size (foreign-type-size (struct "nk_color")))
 (define nk_vec2-size (foreign-type-size (struct "nk_vec2")))
+(define float-size (foreign-type-size float))
 
 (define (make-panel) (make-nk_panel (make-locative (make-blob nk_panel-size))))
 
@@ -450,6 +543,16 @@ enum nk_filter_type {
 (define nk_layout_row_dynamic (foreign-lambda void "nk_layout_row_dynamic" nk_context* float int))
 (define nk_layout_row_static (foreign-lambda void "nk_layout_row_static" nk_context* float int int))
 
+(define nk_layout_row_begin (foreign-lambda void "nk_layout_row_begin" nk_context* (enum "nk_layout_format") float int))
+(define nk_layout_row_push (foreign-lambda void "nk_layout_row_push" nk_context* float))
+(define nk_layout_row_end (foreign-lambda void "nk_layout_row_end" nk_context*))
+(define nk_layout_row (foreign-lambda* void ((nk_context* ctx) ((enum "nk_layout_format") format) (float height) (int cols) (scheme-object data) (blob storage))
+                        "int i;"
+                        "float *ratio = (float*) storage;"
+                        "for (i = 0; i < cols; ++i)"
+                        "  ratio[i] = (float) C_flonum_magnitude(C_block_item(data, i));"
+                        "nk_layout_row(ctx, format, height, cols, ratio);"))
+
 (define nk_layout_space_begin (foreign-lambda void "nk_layout_space_begin" nk_context* (enum "nk_layout_format") float int))
 (define nk_layout_space_push (foreign-lambda* void ((nk_context* ctx) (nk_rect* rect)) "nk_layout_space_push(ctx, *rect);"))
 (define nk_layout_space_end (foreign-lambda void "nk_layout_space_end" nk_context*))
@@ -463,20 +566,43 @@ enum nk_filter_type {
 (define nk_group_begin (foreign-lambda bool "nk_group_begin" nk_context* nk_panel* nonnull-c-string nk_flags))
 (define nk_group_end (foreign-lambda void "nk_group_end" nk_context*))
 
+;; tree
+(define nk_tree_push (foreign-lambda bool "nk_tree_push" nk_context* (enum "nk_tree_type") nonnull-c-string (enum "nk_collapse_states")))
+(define nk_tree_pop (foreign-lambda void "nk_tree_pop" nk_context*))
+
 ;; widget
 (define nk_label (foreign-lambda void "nk_label" nk_context* nonnull-c-string nk_flags))
+(define nk_label_colored (foreign-lambda* void ((nk_context* ctx) (nonnull-c-string text) (nk_flags align) (nk_color* color)) "nk_label_colored(ctx, text, align, *color);"))
+(define nk_label_wrap (foreign-lambda void "nk_label_wrap" nk_context* nonnull-c-string))
 
 ;; button
 (define nk_button_label (foreign-lambda bool "nk_button_label" nk_context* nonnull-c-string (enum "nk_button_behavior")))
 (define nk_button_color (foreign-lambda* bool ((nk_context* ctx) (nk_color* color) ((enum "nk_button_behavior") flag)) "C_return(nk_button_color(ctx, *color, flag));"))
+(define nk_button_symbol (foreign-lambda bool "nk_button_symbol" nk_context* (enum "nk_symbol_type") (enum "nk_button_behavior")))
+(define nk_button_symbol_label (foreign-lambda bool "nk_button_symbol_label" nk_context* (enum "nk_symbol_type") nonnull-c-string nk_flags (enum "nk_button_behavior")))
 
-;; radio
+;; checkbox
+(define nk_check_label (foreign-lambda bool "nk_check_label" nk_context* nonnull-c-string bool))
+
+;; option
 (define nk_option_label (foreign-lambda bool "nk_option_label" nk_context* nonnull-c-string bool))
+
+;; selectable
+(define nk_selectable_label (foreign-lambda bool "nk_selectable_label" nk_context* nonnull-c-string nk_flags int*))
+
+;; slider
+(define nk_slider_float (foreign-lambda bool "nk_slider_float" nk_context* float float* float float))
+(define nk_slider_int (foreign-lambda bool "nk_slider_int" nk_context* int int* int int))
+
+;; progressbar
+
+(define nk_progress (foreign-lambda bool "nk_progress" nk_context* nk_size* nk_size bool))
 
 ;; color picker
 (define nk_color_picker (foreign-lambda* void ((nk_context* ctx) (nk_color* color) ((enum "nk_color_format") flag) (uint8* r) (uint8* g) (uint8* b) (uint8* a)) "struct nk_color c = nk_color_picker(ctx, *color, flag); *r = c.r, *g = c.g, *b = c.b, *a = c.a;"))
 
 ;; property
+(define nk_propertyf (foreign-lambda float "nk_propertyf" nk_context* nonnull-c-string float float float float float))
 (define nk_propertyi (foreign-lambda int "nk_propertyi" nk_context* nonnull-c-string int int int int int))
 
 ;; textedit
@@ -496,13 +622,31 @@ enum nk_filter_type {
                          "buffer[len] = 0;"
                          "C_return(buffer);"))
 
+;; chart
+(define nk_chart_begin (foreign-lambda bool "nk_chart_begin" nk_context* (enum "nk_chart_type") int float float))
+(define nk_chart_begin_colored (foreign-lambda* bool ((nk_context* ctx) ((enum "nk_chart_type") type) (nk_color* color) (nk_color* highlight) (int count) (float min_value) (float max_value)) "C_return(nk_chart_begin_colored(ctx, type, *color, *highlight, count, min_value, max_value));"))
+(define nk_chart_push (foreign-lambda nk_flags "nk_chart_push" nk_context* float))
+(define nk_chart_push_slot (foreign-lambda nk_flags "nk_chart_push_slot" nk_context* float int))
+(define nk_chart_add_slot (foreign-lambda void "nk_chart_add_slot" nk_context* (enum "nk_chart_type") int float float))
+(define nk_chart_add_slot_colored (foreign-lambda* void ((nk_context* ctx) ((enum "nk_chart_type") type) (nk_color* color) (nk_color* highlight) (int count) (float min_value) (float max_value)) "nk_chart_add_slot_colored(ctx, type, *color, *highlight, count, min_value, max_value);"))
+(define nk_chart_end (foreign-lambda void "nk_chart_end" nk_context*))
+
 ;; popup
 (define nk_popup_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) ((enum "nk_popup_type") type) (nonnull-c-string title) (nk_flags flags) (nk_rect* rect)) "C_return(nk_popup_begin(ctx, layout, type, title, flags, *rect));"))
 (define nk_popup_close (foreign-lambda void "nk_popup_close" nk_context*))
 (define nk_popup_end (foreign-lambda void "nk_popup_end" nk_context*))
 
 ;; combo box
+(define nk_combo (foreign-lambda* int ((nk_context* ctx) (scheme-object data) (int count) (int selected) (int item_height))
+                   "int i;"
+                   "C_word strings = (C_word) data;"
+                   "const char *items[count];"
+                   "for (i = 0; i < count; i++)"
+                   "  items[i] = (char*) C_c_string(C_block_item(data, i));"
+                   "C_return(nk_combo(ctx, items, count, selected, item_height));"))
+(define nk_combo_begin_label (foreign-lambda bool "nk_combo_begin_label" nk_context* nk_panel* nonnull-c-string int))
 (define nk_combo_begin_color (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) (nk_color* c) (int max_height)) "C_return(nk_combo_begin_color(ctx, layout, *c, max_height));"))
+(define nk_combo_close (foreign-lambda void "nk_combo_close" nk_context*))
 (define nk_combo_end (foreign-lambda void "nk_combo_end" nk_context*))
 
 ;; contextual
@@ -510,8 +654,25 @@ enum nk_filter_type {
 (define nk_contextual_item_label (foreign-lambda bool "nk_contextual_item_label" nk_context* nonnull-c-string nk_flags))
 (define nk_contextual_end (foreign-lambda void "nk_contextual_end" nk_context*))
 
+;; tooltip
+(define nk_tooltip (foreign-lambda void "nk_tooltip" nk_context* nonnull-c-string))
+
+;; menu
+
+(define nk_menubar_begin (foreign-lambda void "nk_menubar_begin" nk_context*))
+(define nk_menubar_end (foreign-lambda void "nk_menubar_end" nk_context*))
+(define nk_menu_begin_label (foreign-lambda bool "nk_menu_begin_label" nk_context* nk_panel* nonnull-c-string nk_flags float))
+(define nk_menu_item_label (foreign-lambda bool "nk_menu_item_label" nk_context* nonnull-c-string nk_flags))
+(define nk_menu_end (foreign-lambda void "nk_menu_end" nk_context*))
+
 ;; utils
+(define nk_widget_bounds (foreign-lambda* void ((nk_context* ctx) (nk_rect* out)) "*out = nk_widget_bounds(ctx);"))
+(define nk_spacing (foreign-lambda void "nk_spacing" nk_context* int))
+
 (define nk_color_f (foreign-lambda* void ((float* r) (float* g) (float* b) (float* a) (nk_color* c)) "nk_color_f(r, g, b, a, *c);"))
+
+(define nk_hsva (foreign-lambda* void ((int h) (int s) (int v) (int a) (nk_color* out)) "*out = nk_hsva(h, s, v, a);"))
+(define nk_color_hsva_i (foreign-lambda* void ((int* h) (int* s) (int* v) (int* a) (nk_color* c)) "nk_color_hsva_i(h, s, v, a, *c);"))
 
 ;; drawing
 (define nk_stroke_line (foreign-lambda* void ((nk_command_buffer* buffer) (float x0) (float y0) (float x1) (float y1) (float line_thickness) (nk_color* c)) "nk_stroke_line(buffer, x0, y0, x1, y1, line_thickness, *c);"))
@@ -523,6 +684,7 @@ enum nk_filter_type {
 
 (define nk_input_has_mouse_click_down_in_rect (foreign-lambda* bool (((const nk_input*) input) ((enum "nk_buttons") button) (nk_rect* rect) (bool down)) "C_return(nk_input_has_mouse_click_down_in_rect(input, button, *rect, down));"))
 (define nk_input_is_mouse_hovering_rect (foreign-lambda* bool (((const nk_input*) input) (nk_rect* rect)) "C_return(nk_input_is_mouse_hovering_rect(input, *rect));"))
+(define nk_input_is_mouse_prev_hovering_rect (foreign-lambda* bool (((const nk_input*) input) (nk_rect* rect)) "C_return(nk_input_is_mouse_prev_hovering_rect(input, *rect));"))
 (define nk_input_mouse_clicked (foreign-lambda* bool (((const nk_input*) input) ((enum "nk_buttons") button) (nk_rect* rect)) "C_return(nk_input_mouse_clicked(input, button, *rect));"))
 (define nk_input_is_mouse_down (foreign-lambda bool "nk_input_is_mouse_down" (const nk_input*) (enum "nk_buttons")))
 (define nk_input_is_mouse_released (foreign-lambda bool "nk_input_is_mouse_released" (const nk_input*) (enum "nk_buttons")))
@@ -531,11 +693,11 @@ enum nk_filter_type {
 
 ;; widgets
 
-(define (window-begin context layout title rect flags)
+(define (window-begin context layout title rect flag-or-flags)
   (let ((context* (context-pointer context))
         (layout* (nk_panel-pointer layout))
         (rect* (nk_rect-pointer rect))
-        (flag (window-flags->int flags)))
+        (flag (window-flag-or-flags->int flag-or-flags)))
     (nk_begin context* layout* title rect* flag)))
 
 (define (window-end context)
@@ -572,9 +734,30 @@ enum nk_filter_type {
   (let ((context* (context-pointer context)))
     (nk_layout_row_static context* height item-width columns)))
 
-(define (layout-space-begin context flag height widget-count)
+(define (layout-row-begin context dynamic? row-height columns)
   (let ((context* (context-pointer context))
-        (format (if flag NK_STATIC NK_DYNAMIC)))
+        (flag (if dynamic? NK_DYNAMIC NK_STATIC)))
+    (nk_layout_row_begin context* flag row-height columns)))
+
+(define (layout-row-push context ratio-or-width)
+  (let ((context* (context-pointer context)))
+    (nk_layout_row_push context* ratio-or-width)))
+
+(define (layout-row-end context)
+  (let ((context* (context-pointer context)))
+    (nk_layout_row_end context*)))
+
+(define (layout-row context dynamic? height ratios)
+  (let* ((context* (context-pointer context))
+         (flag (if dynamic? NK_DYNAMIC NK_STATIC))
+         (data (list->vector (map exact->inexact ratios)))
+         (size (vector-length data))
+         (storage (make-blob (* size float-size))))
+    (nk_layout_row context* flag height size data storage)))
+
+(define (layout-space-begin context dynamic? height widget-count)
+  (let ((context* (context-pointer context))
+        (format (if dynamic? NK_DYNAMIC NK_STATIC)))
     (nk_layout_space_begin context* format height widget-count)))
 
 (define (layout-space-end context)
@@ -617,20 +800,40 @@ enum nk_filter_type {
     (nk_layout_space_rect_to_local context* in* out*)
     out))
 
-(define (group-begin context layout title flags)
+(define (group-begin context layout title flag-or-flags)
   (let ((context* (context-pointer context))
         (layout* (nk_panel-pointer layout))
-        (flag (window-flags->int flags)))
+        (flag (window-flag-or-flags->int flag-or-flags)))
     (nk_group_begin context* layout* title flag)))
 
 (define (group-end context)
   (let ((context* (context-pointer context)))
     (nk_group_end context*)))
 
+(define (tree-push context tab? text maximized?)
+  (let ((context* (context-pointer context))
+        (type (if tab? NK_TREE_TAB NK_TREE_NODE))
+        (collapsed? (if maximized? NK_MAXIMIZED NK_MINIMIZED)))
+    (nk_tree_push context* type text collapsed?)))
+
+(define (tree-pop context)
+  (let ((context* (context-pointer context)))
+    (nk_tree_pop context*)))
+
 (define (label context text alignment)
   (let ((context* (context-pointer context))
         (flag (text-alignment->int alignment)))
     (nk_label context* text flag)))
+
+(define (label-colored context text alignment color)
+  (let ((context* (context-pointer context))
+        (flag (text-alignment->int alignment))
+        (color* (nk_color-pointer color)))
+    (nk_label_colored context* text flag color*)))
+
+(define (label-wrap context text)
+  (let ((context* (context-pointer context)))
+    (nk_label_wrap context* text)))
 
 (define (button-label context text #!optional repeater?)
   (let ((context* (context-pointer context))
@@ -647,9 +850,56 @@ enum nk_filter_type {
                   NK_BUTTON_DEFAULT)))
     (nk_button_color context* color* flag)))
 
+(define (button-symbol context symbol #!optional repeater?)
+  (let ((context* (context-pointer context))
+        (symbol-flag (symbol->int symbol))
+        (behavior-flag (if repeater?
+                           NK_BUTTON_REPEATER
+                           NK_BUTTON_DEFAULT)))
+    (nk_button_symbol context* symbol-flag behavior-flag)))
+
+(define (button-symbol-label context symbol text alignment #!optional repeater?)
+  (let ((context* (context-pointer context))
+        (symbol-flag (symbol->int symbol))
+        (alignment-flag (text-alignment->int alignment))
+        (behavior-flag (if repeater?
+                           NK_BUTTON_REPEATER
+                           NK_BUTTON_DEFAULT)))
+    (nk_button_symbol_label context* symbol-flag text alignment-flag behavior-flag)))
+
+(define (checkbox-label context text active?)
+  (let ((context* (context-pointer context)))
+    (nk_check_label context* text active?)))
+
 (define (option-label context text active?)
   (let ((context* (context-pointer context)))
     (nk_option_label context* text active?)))
+
+(define (selectable-label context text alignment active?)
+  (let ((context* (context-pointer context))
+        (flag (text-alignment->int alignment)))
+    (let-location ((val bool active?))
+      (let ((ret (nk_selectable_label context* text flag (location val))))
+        (values val ret)))))
+
+(define (slider-float context min value max step)
+  (let ((context* (context-pointer context)))
+    (let-location ((val float value))
+      (let ((ret (nk_slider_float context* min (location val) max step)))
+        (values val ret)))))
+
+(define (slider-int context min value max step)
+  (let ((context* (context-pointer context)))
+    (let-location ((val int value))
+      (let ((ret (nk_slider_int context* min (location val) max step)))
+        (values val ret)))))
+
+(define (progressbar context value max modifiable?)
+  (let ((context* (context-pointer context))
+        (flag (if modifiable? NK_MODIFIABLE NK_FIXED)))
+    (let-location ((val nk_size value))
+      (let ((ret (nk_progress context* (location val) max flag)))
+        (values val ret)))))
 
 (define (color-picker context color #!optional rgb?)
   (let ((context* (context-pointer context))
@@ -662,15 +912,19 @@ enum nk_filter_type {
       (nk_color_picker context* color* flag (location r) (location g) (location b) (location a))
       (make-color r g b a))))
 
+(define (property-float context text min value max step pixel-step)
+  (let ((context* (context-pointer context)))
+    (nk_propertyf context* text min value max step pixel-step)))
+
 (define (property-int context text min value max step pixel-step)
   (let ((context* (context-pointer context)))
     (nk_propertyi context* text min value max step pixel-step)))
 
-(define (edit-string context edit-type-or-flags text max #!optional filter-flag)
+(define (edit-string context edit-flag-or-flags text max #!optional filter-flag)
   (let ((context* (context-pointer context))
-        (edit-flags (if (symbol? edit-type-or-flags)
-                        (edit-type->int edit-type-or-flags)
-                        (edit-flags->int edit-type-or-flags)))
+        (edit-flags (if (symbol? edit-flag-or-flags)
+                        (edit-flag->int edit-flag-or-flags)
+                        (edit-flags->int edit-flag-or-flags)))
         (len (string-length text))
         (buffer (make-blob max))
         (filter-value (filter-flag->int (or filter-flag 'default))))
@@ -679,13 +933,49 @@ enum nk_filter_type {
                                  (location edit-value) filter-value)))
         (values ret (int->edit-events edit-value))))))
 
-(define (popup-begin context layout dynamic? title flags rect)
+(define (chart-begin context lines? count min-value max-value)
+  (let ((context* (context-pointer context))
+        (flag (if lines? NK_CHART_LINES NK_CHART_COLUMN)))
+    (nk_chart_begin context* flag count min-value max-value)))
+
+(define (chart-begin-colored context lines? color highlight count min-value max-value)
+  (let ((context* (context-pointer context))
+        (flag (if lines? NK_CHART_LINES NK_CHART_COLUMN))
+        (color* (nk_color-pointer color))
+        (highlight* (nk_color-pointer highlight)))
+    (nk_chart_begin_colored context* flag color* highlight* count min-value max-value)))
+
+(define (chart-push context value)
+  (let ((context* (context-pointer context)))
+    (int->chart-events (nk_chart_push context* value))))
+
+(define (chart-push-slot context value slot)
+  (let ((context* (context-pointer context)))
+    (int->chart-events (nk_chart_push_slot context* value slot))))
+
+(define (chart-add-slot context lines? count min-value max-value)
+  (let ((context* (context-pointer context))
+        (flag (if lines? NK_CHART_LINES NK_CHART_COLUMN)))
+    (nk_chart_add_slot context* flag count min-value max-value)))
+
+(define (chart-add-slot-colored context lines? color highlight count min-value max-value)
+  (let ((context* (context-pointer context))
+        (flag (if lines? NK_CHART_LINES NK_CHART_COLUMN))
+        (color* (nk_color-pointer color))
+        (highlight* (nk_color-pointer highlight)))
+    (nk_chart_add_slot_colored context* flag color* highlight* count min-value max-value)))
+
+(define (chart-end context)
+  (let ((context* (context-pointer context)))
+    (nk_chart_end context*)))
+
+(define (popup-begin context layout dynamic? title flag-or-flags rect)
   (let ((context* (context-pointer context))
         (layout* (nk_panel-pointer layout))
         (type (if dynamic?
                   NK_POPUP_DYNAMIC
                   NK_POPUP_STATIC))
-        (flag (window-flags->int flags))
+        (flag (window-flag-or-flags->int flag-or-flags))
         (rect* (nk_rect-pointer rect)))
     (nk_popup_begin context* layout* type title flag rect*)))
 
@@ -697,11 +987,25 @@ enum nk_filter_type {
   (let ((context* (context-pointer context)))
     (nk_popup_end context*)))
 
+(define (combo context items selected item-height)
+  (let ((context* (context-pointer context))
+        (data (list->vector (map ->string items))))
+    (nk_combo context* data (vector-length data) selected item-height)))
+
+(define (combo-begin-label context layout text max-height)
+  (let ((context* (context-pointer context))
+        (layout* (nk_panel-pointer layout)))
+    (nk_combo_begin_label context* layout* text max-height)))
+
 (define (combo-begin-color context layout color max-height)
   (let ((context* (context-pointer context))
         (layout* (nk_panel-pointer layout))
         (color* (nk_color-pointer color)))
     (nk_combo_begin_color context* layout* color* max-height)))
+
+(define (combo-close context)
+  (let ((context* (context-pointer context)))
+    (nk_combo_close context*)))
 
 (define (combo-end context)
   (let ((context* (context-pointer context)))
@@ -710,7 +1014,7 @@ enum nk_filter_type {
 (define (contextual-begin context layout flags size trigger-bounds)
   (let ((context* (context-pointer context))
         (layout* (nk_panel-pointer layout))
-        (flag (window-flags->int flags))
+        (flag (window-flag-or-flags->int flags))
         (size* (nk_vec2-pointer size))
         (trigger-bounds* (nk_rect-pointer trigger-bounds)))
     (nk_contextual_begin context* layout* flag size* trigger-bounds*)))
@@ -724,7 +1028,45 @@ enum nk_filter_type {
   (let ((context* (context-pointer context)))
     (nk_contextual_end context*)))
 
+(define (tooltip context text)
+  (let ((context* (context-pointer context)))
+    (nk_tooltip context* text)))
+
+(define (menubar-begin context)
+  (let ((context* (context-pointer context)))
+    (nk_menubar_begin context*)))
+
+(define (menubar-end context)
+  (let ((context* (context-pointer context)))
+    (nk_menubar_end context*)))
+
+(define (menu-begin-label context layout text alignment width)
+  (let ((context* (context-pointer context))
+        (layout* (nk_panel-pointer layout))
+        (flag (text-alignment->int alignment)))
+    (nk_menu_begin_label context* layout* text flag width)))
+
+(define (menu-item-label context text alignment)
+  (let ((context* (context-pointer context))
+        (flag (text-alignment->int alignment)))
+    (nk_menu_item_label context* text flag)))
+
+(define (menu-end context)
+  (let ((context* (context-pointer context)))
+    (nk_menu_end context*)))
+
 ;; utils
+
+(define (widget-bounds context)
+  (let* ((context* (context-pointer context))
+         (rect (make-rect 0 0 0 0))
+         (rect* (nk_rect-pointer rect)))
+    (nk_widget_bounds context* rect*)
+    rect))
+
+(define (spacing context cols)
+  (let ((context* (context-pointer context)))
+    (nk_spacing context* cols)))
 
 (define (rgb->color r g b)
   (make-color r g b 255))
@@ -737,6 +1079,21 @@ enum nk_filter_type {
                    (a float))
       (nk_color_f (location r) (location g) (location b) (location a) color*)
       (list r g b a))))
+
+(define (hsva->color h s v a)
+  (let* ((color (make-color 0 0 0 0))
+         (color* (nk_color-pointer color)))
+    (nk_hsva h s v a color*)
+    color))
+
+(define (color->hsva-ints color)
+  (let ((color* (nk_color-pointer color)))
+    (let-location ((h int)
+                   (s int)
+                   (v int)
+                   (a int))
+      (nk_color_hsva_i (location h) (location s) (location v) (location a) color*)
+      (list h s v a))))
 
 ;; drawing
 
@@ -768,6 +1125,11 @@ enum nk_filter_type {
   (let ((input* (input-pointer input))
         (rect* (nk_rect-pointer rect)))
     (nk_input_is_mouse_hovering_rect input* rect*)))
+
+(define (input-mouse-previously-hovering-in-rect? input rect)
+  (let ((input* (input-pointer input))
+        (rect* (nk_rect-pointer rect)))
+    (nk_input_is_mouse_prev_hovering_rect input* rect*)))
 
 (define (input-mouse-clicked? input button rect)
   (let ((input* (input-pointer input))
