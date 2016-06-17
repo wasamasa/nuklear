@@ -27,7 +27,7 @@
    edit-string
    chart-begin chart-begin-colored chart-push chart-push-slot chart-add-slot chart-add-slot-colored chart-end
    popup-begin popup-close popup-end
-   combo combo-begin-label combo-begin-color combo-close combo-end
+   combo-begin-label combo-begin-color combo-items-height combo-item-label combo-close combo-end
    contextual-begin contextual-item-label contextual-end
    tooltip
    menubar-begin menubar-end menu-begin-label menu-item-label menu-end
@@ -637,15 +637,13 @@ enum nk_filter_type {
 (define nk_popup_end (foreign-lambda void "nk_popup_end" nk_context*))
 
 ;; combo box
-(define nk_combo (foreign-lambda* int ((nk_context* ctx) (scheme-object data) (int count) (int selected) (int item_height))
-                   "int i;"
-                   "C_word strings = (C_word) data;"
-                   "const char *items[count];"
-                   "for (i = 0; i < count; i++)"
-                   "  items[i] = (char*) C_c_string(C_block_item(data, i));"
-                   "C_return(nk_combo(ctx, items, count, selected, item_height));"))
 (define nk_combo_begin_label (foreign-lambda bool "nk_combo_begin_label" nk_context* nk_panel* nonnull-c-string int))
 (define nk_combo_begin_color (foreign-lambda* bool ((nk_context* ctx) (nk_panel* panel) (nk_color* c) (int max_height)) "C_return(nk_combo_begin_color(ctx, panel, *c, max_height));"))
+(define nk_combo_items_height (foreign-lambda* int ((nk_context* ctx) (int count) (int height))
+                                "float item_padding = ctx->style.combo.button_padding.y;"
+                                "float window_padding = ctx->style.window.padding.y;"
+                                "C_return((count+1) * height + (int)item_padding * 3 + (int)window_padding * 2);"))
+(define nk_combo_item_label (foreign-lambda bool "nk_combo_item_label" nk_context* nonnull-c-string (enum "nk_text_alignment")))
 (define nk_combo_close (foreign-lambda void "nk_combo_close" nk_context*))
 (define nk_combo_end (foreign-lambda void "nk_combo_end" nk_context*))
 
@@ -987,11 +985,6 @@ enum nk_filter_type {
   (let ((context* (context-pointer context)))
     (nk_popup_end context*)))
 
-(define (combo context items selected item-height)
-  (let ((context* (context-pointer context))
-        (data (list->vector (map ->string items))))
-    (nk_combo context* data (vector-length data) selected item-height)))
-
 (define (combo-begin-label context panel text max-height)
   (let ((context* (context-pointer context))
         (panel* (nk_panel-pointer panel)))
@@ -1002,6 +995,15 @@ enum nk_filter_type {
         (panel* (nk_panel-pointer panel))
         (color* (nk_color-pointer color)))
     (nk_combo_begin_color context* panel* color* max-height)))
+
+(define (combo-items-height context count height)
+  (let ((context* (context-pointer context)))
+    (nk_combo_items_height context* count height)))
+
+(define (combo-item-label context text alignment)
+  (let ((context* (context-pointer context))
+        (flag (text-alignment->int alignment)))
+    (nk_combo_item_label context* text flag)))
 
 (define (combo-close context)
   (let ((context* (context-pointer context)))
