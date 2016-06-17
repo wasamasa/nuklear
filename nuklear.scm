@@ -639,10 +639,10 @@ enum nk_filter_type {
 ;; combo box
 (define nk_combo_begin_label (foreign-lambda bool "nk_combo_begin_label" nk_context* nk_panel* nonnull-c-string int))
 (define nk_combo_begin_color (foreign-lambda* bool ((nk_context* ctx) (nk_panel* panel) (nk_color* c) (int max_height)) "C_return(nk_combo_begin_color(ctx, panel, *c, max_height));"))
-(define nk_combo_items_height (foreign-lambda* int ((nk_context* ctx) (int count) (int height))
+(define nk_combo_items_height (foreign-lambda* int ((nk_context* ctx) (int count) (int item_height))
                                 "float item_padding = ctx->style.combo.button_padding.y;"
                                 "float window_padding = ctx->style.window.padding.y;"
-                                "C_return((count+1) * height + (int)item_padding * 3 + (int)window_padding * 2);"))
+                                "C_return((count+1) * item_height + (int)item_padding * 3 + (int)window_padding * 2);"))
 (define nk_combo_item_label (foreign-lambda bool "nk_combo_item_label" nk_context* nonnull-c-string (enum "nk_text_alignment")))
 (define nk_combo_close (foreign-lambda void "nk_combo_close" nk_context*))
 (define nk_combo_end (foreign-lambda void "nk_combo_end" nk_context*))
@@ -996,9 +996,9 @@ enum nk_filter_type {
         (color* (nk_color-pointer color)))
     (nk_combo_begin_color context* panel* color* max-height)))
 
-(define (combo-items-height context count height)
+(define (combo-items-height context count item-height)
   (let ((context* (context-pointer context)))
-    (nk_combo_items_height context* count height)))
+    (nk_combo_items_height context* count item-height)))
 
 (define (combo-item-label context text alignment)
   (let ((context* (context-pointer context))
