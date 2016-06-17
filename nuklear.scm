@@ -1066,9 +1066,9 @@ enum nk_filter_type {
     (nk_widget_bounds context* rect*)
     rect))
 
-(define (spacing context cols)
+(define (spacing context columns)
   (let ((context* (context-pointer context)))
-    (nk_spacing context* cols)))
+    (nk_spacing context* columns)))
 
 (define (rgb->color r g b)
   (make-color r g b 255))
