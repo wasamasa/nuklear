@@ -215,7 +215,6 @@
 (define NK_EDIT_INACTIVE (foreign-value "NK_EDIT_INACTIVE" int))
 (define NK_EDIT_ACTIVATED (foreign-value "NK_EDIT_ACTIVATED" int))
 (define NK_EDIT_DEACTIVATED (foreign-value "NK_EDIT_DEACTIVATED" int))
-;; TODO: fix typo upstream
 (define NK_EDIT_COMMITTED (foreign-value "NK_EDIT_COMMITED" int))
 
 (define (int->edit-event value)
@@ -299,7 +298,6 @@ enum nk_filter_type {
 
 ;;; typedefs
 
-;; TODO: consider adding nonnull-c-string (as string?)
 (define-foreign-type nk_context* (nonnull-c-pointer (struct "nk_context")))
 (define-foreign-type nk_command_buffer* (nonnull-c-pointer (struct "nk_command_buffer")))
 (define-foreign-type nk_input* (nonnull-c-pointer (struct "nk_input")))
