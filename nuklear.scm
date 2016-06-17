@@ -732,10 +732,10 @@ enum nk_filter_type {
   (let ((context* (context-pointer context)))
     (nk_layout_row_static context* height item-width columns)))
 
-(define (layout-row-begin context dynamic? row-height columns)
+(define (layout-row-begin context dynamic? height columns)
   (let ((context* (context-pointer context))
         (flag (if dynamic? NK_DYNAMIC NK_STATIC)))
-    (nk_layout_row_begin context* flag row-height columns)))
+    (nk_layout_row_begin context* flag height columns)))
 
 (define (layout-row-push context ratio-or-width)
   (let ((context* (context-pointer context)))
@@ -745,10 +745,10 @@ enum nk_filter_type {
   (let ((context* (context-pointer context)))
     (nk_layout_row_end context*)))
 
-(define (layout-row context dynamic? height ratios)
+(define (layout-row context dynamic? height ratios-or-widths)
   (let* ((context* (context-pointer context))
          (flag (if dynamic? NK_DYNAMIC NK_STATIC))
-         (data (list->vector (map exact->inexact ratios)))
+         (data (list->vector (map exact->inexact ratios-or-widths)))
          (size (vector-length data))
          (storage (make-blob (* size float-size))))
     (nk_layout_row context* flag height size data storage)))
@@ -758,14 +758,14 @@ enum nk_filter_type {
         (format (if dynamic? NK_DYNAMIC NK_STATIC)))
     (nk_layout_space_begin context* format height widget-count)))
 
-(define (layout-space-end context)
-  (let ((context* (context-pointer context)))
-    (nk_layout_space_end context*)))
-
 (define (layout-space-push context rect)
   (let ((context* (context-pointer context))
         (rect* (nk_rect-pointer rect)))
     (nk_layout_space_push context* rect*)))
+
+(define (layout-space-end context)
+  (let ((context* (context-pointer context)))
+    (nk_layout_space_end context*)))
 
 (define (layout-space-bounds context)
   (let* ((context* (context-pointer context))
