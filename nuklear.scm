@@ -529,7 +529,7 @@ enum nk_filter_type {
 ;;; foreign functions
 
 ;; window
-(define nk_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) (nonnull-c-string title) (nk_rect* bounds) (nk_flags flags)) "C_return(nk_begin(ctx, layout, title, *bounds, flags));"))
+(define nk_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* panel) (nonnull-c-string title) (nk_rect* bounds) (nk_flags flags)) "C_return(nk_begin(ctx, panel, title, *bounds, flags));"))
 (define nk_end (foreign-lambda void "nk_end" nk_context*))
 
 (define nk_window_get_bounds (foreign-lambda* void ((nk_context* ctx) (nk_rect* data)) "*data = nk_window_get_bounds(ctx);"))
@@ -632,7 +632,7 @@ enum nk_filter_type {
 (define nk_chart_end (foreign-lambda void "nk_chart_end" nk_context*))
 
 ;; popup
-(define nk_popup_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) ((enum "nk_popup_type") type) (nonnull-c-string title) (nk_flags flags) (nk_rect* rect)) "C_return(nk_popup_begin(ctx, layout, type, title, flags, *rect));"))
+(define nk_popup_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* panel) ((enum "nk_popup_type") type) (nonnull-c-string title) (nk_flags flags) (nk_rect* rect)) "C_return(nk_popup_begin(ctx, panel, type, title, flags, *rect));"))
 (define nk_popup_close (foreign-lambda void "nk_popup_close" nk_context*))
 (define nk_popup_end (foreign-lambda void "nk_popup_end" nk_context*))
 
@@ -645,12 +645,12 @@ enum nk_filter_type {
                    "  items[i] = (char*) C_c_string(C_block_item(data, i));"
                    "C_return(nk_combo(ctx, items, count, selected, item_height));"))
 (define nk_combo_begin_label (foreign-lambda bool "nk_combo_begin_label" nk_context* nk_panel* nonnull-c-string int))
-(define nk_combo_begin_color (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) (nk_color* c) (int max_height)) "C_return(nk_combo_begin_color(ctx, layout, *c, max_height));"))
+(define nk_combo_begin_color (foreign-lambda* bool ((nk_context* ctx) (nk_panel* panel) (nk_color* c) (int max_height)) "C_return(nk_combo_begin_color(ctx, panel, *c, max_height));"))
 (define nk_combo_close (foreign-lambda void "nk_combo_close" nk_context*))
 (define nk_combo_end (foreign-lambda void "nk_combo_end" nk_context*))
 
 ;; contextual
-(define nk_contextual_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* layout) (nk_flags flags) (nk_vec2* vec2) (nk_rect* rect)) "C_return(nk_contextual_begin(ctx, layout, flags, *vec2, *rect));"))
+(define nk_contextual_begin (foreign-lambda* bool ((nk_context* ctx) (nk_panel* panel) (nk_flags flags) (nk_vec2* vec2) (nk_rect* rect)) "C_return(nk_contextual_begin(ctx, panel, flags, *vec2, *rect));"))
 (define nk_contextual_item_label (foreign-lambda bool "nk_contextual_item_label" nk_context* nonnull-c-string nk_flags))
 (define nk_contextual_end (foreign-lambda void "nk_contextual_end" nk_context*))
 
@@ -693,12 +693,12 @@ enum nk_filter_type {
 
 ;; widgets
 
-(define (window-begin context layout title rect flag-or-flags)
+(define (window-begin context panel title rect flag-or-flags)
   (let ((context* (context-pointer context))
-        (layout* (nk_panel-pointer layout))
+        (panel* (nk_panel-pointer panel))
         (rect* (nk_rect-pointer rect))
         (flag (window-flag-or-flags->int flag-or-flags)))
-    (nk_begin context* layout* title rect* flag)))
+    (nk_begin context* panel* title rect* flag)))
 
 (define (window-end context)
   (let ((context* (context-pointer context)))
@@ -800,11 +800,11 @@ enum nk_filter_type {
     (nk_layout_space_rect_to_local context* in* out*)
     out))
 
-(define (group-begin context layout title flag-or-flags)
+(define (group-begin context panel title flag-or-flags)
   (let ((context* (context-pointer context))
-        (layout* (nk_panel-pointer layout))
+        (panel* (nk_panel-pointer panel))
         (flag (window-flag-or-flags->int flag-or-flags)))
-    (nk_group_begin context* layout* title flag)))
+    (nk_group_begin context* panel* title flag)))
 
 (define (group-end context)
   (let ((context* (context-pointer context)))
@@ -969,15 +969,15 @@ enum nk_filter_type {
   (let ((context* (context-pointer context)))
     (nk_chart_end context*)))
 
-(define (popup-begin context layout dynamic? title flag-or-flags rect)
+(define (popup-begin context panel dynamic? title flag-or-flags rect)
   (let ((context* (context-pointer context))
-        (layout* (nk_panel-pointer layout))
+        (panel* (nk_panel-pointer panel))
         (type (if dynamic?
                   NK_POPUP_DYNAMIC
                   NK_POPUP_STATIC))
         (flag (window-flag-or-flags->int flag-or-flags))
         (rect* (nk_rect-pointer rect)))
-    (nk_popup_begin context* layout* type title flag rect*)))
+    (nk_popup_begin context* panel* type title flag rect*)))
 
 (define (popup-close context)
   (let ((context* (context-pointer context)))
@@ -992,16 +992,16 @@ enum nk_filter_type {
         (data (list->vector (map ->string items))))
     (nk_combo context* data (vector-length data) selected item-height)))
 
-(define (combo-begin-label context layout text max-height)
+(define (combo-begin-label context panel text max-height)
   (let ((context* (context-pointer context))
-        (layout* (nk_panel-pointer layout)))
-    (nk_combo_begin_label context* layout* text max-height)))
+        (panel* (nk_panel-pointer panel)))
+    (nk_combo_begin_label context* panel* text max-height)))
 
-(define (combo-begin-color context layout color max-height)
+(define (combo-begin-color context panel color max-height)
   (let ((context* (context-pointer context))
-        (layout* (nk_panel-pointer layout))
+        (panel* (nk_panel-pointer panel))
         (color* (nk_color-pointer color)))
-    (nk_combo_begin_color context* layout* color* max-height)))
+    (nk_combo_begin_color context* panel* color* max-height)))
 
 (define (combo-close context)
   (let ((context* (context-pointer context)))
@@ -1011,13 +1011,13 @@ enum nk_filter_type {
   (let ((context* (context-pointer context)))
     (nk_combo_end context*)))
 
-(define (contextual-begin context layout flags size trigger-bounds)
+(define (contextual-begin context panel flag-or-flags size trigger-bounds)
   (let ((context* (context-pointer context))
-        (layout* (nk_panel-pointer layout))
-        (flag (window-flag-or-flags->int flags))
+        (panel* (nk_panel-pointer panel))
+        (flag (window-flag-or-flags->int flag-or-flags))
         (size* (nk_vec2-pointer size))
         (trigger-bounds* (nk_rect-pointer trigger-bounds)))
-    (nk_contextual_begin context* layout* flag size* trigger-bounds*)))
+    (nk_contextual_begin context* panel* flag size* trigger-bounds*)))
 
 (define (contextual-item-label context text alignment)
   (let ((context* (context-pointer context))
@@ -1040,11 +1040,11 @@ enum nk_filter_type {
   (let ((context* (context-pointer context)))
     (nk_menubar_end context*)))
 
-(define (menu-begin-label context layout text alignment width)
+(define (menu-begin-label context panel text alignment width)
   (let ((context* (context-pointer context))
-        (layout* (nk_panel-pointer layout))
+        (panel* (nk_panel-pointer panel))
         (flag (text-alignment->int alignment)))
-    (nk_menu_begin_label context* layout* text flag width)))
+    (nk_menu_begin_label context* panel* text flag width)))
 
 (define (menu-item-label context text alignment)
   (let ((context* (context-pointer context))
