@@ -19,12 +19,15 @@
 (define quit? #f)
 (define show-greeting? #f)
 
+(define layout (nk:make-panel))
+(define popup-layout (nk:make-panel))
+
 (let loop ()
   (when (and (not (glfw:window-should-close (glfw:window))) (not quit?))
     (glfw:poll-events)
     (backend:new-frame)
 
-    (when (nk:window-begin context (nk:make-panel) "Hello World!"
+    (when (nk:window-begin context layout "Hello World!"
                            (nk:make-rect 10 10 192 100)
                            '(border no-scrollbar movable))
       (nk:layout-row-dynamic context 30 2)
@@ -35,7 +38,7 @@
         (set! quit? #t))
 
       (when show-greeting?
-        (if (nk:popup-begin context (nk:make-panel) #f "Greeting" '(dynamic)
+        (if (nk:popup-begin context popup-layout #f "Greeting" '(dynamic)
                             (nk:make-rect 15 50 200 150))
             (begin
               (nk:layout-row-dynamic context 25 1)

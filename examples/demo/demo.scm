@@ -20,6 +20,8 @@
 
 (define hard? #f)
 (define property 20)
+(define layout (nk:make-panel))
+(define combo-layout (nk:make-panel))
 (define background (nk:rgb->color 28 48 62))
 
 (let loop ()
@@ -27,7 +29,7 @@
     (glfw:poll-events)
     (backend:new-frame)
 
-    (when (nk:window-begin context (nk:make-panel) "Demo"
+    (when (nk:window-begin context layout "Demo"
                            (nk:make-rect 50 50 230 250)
                            '(border movable scalable minimizable title))
       (nk:layout-row-static context 30 80 1)
@@ -47,7 +49,7 @@
       (nk:label context "background:" 'left)
 
       (nk:layout-row-dynamic context 25 1)
-      (when (nk:combo-begin-color context (nk:make-panel) background 400)
+      (when (nk:combo-begin-color context combo-layout background 400)
         (nk:layout-row-dynamic context 120 1)
         (set! background (nk:color-picker context background))
         (nk:layout-row-dynamic context 25 1)

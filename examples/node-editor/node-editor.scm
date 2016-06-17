@@ -63,6 +63,10 @@
 (define (fpmod x y)
   (fp- x (fp* (fpfloor (fp/ x y)) y)))
 
+(define layout (nk:make-panel))
+(define node-layout (nk:make-panel))
+(define context-layout (nk:make-panel))
+
 (let loop ()
   (when (and (not (glfw:window-should-close (glfw:window))))
     (glfw:poll-events)
@@ -72,7 +76,7 @@
       (node-editor-init! editor)
       (node-editor-initialized?-set! editor #t))
 
-    (when (nk:window-begin context (nk:make-panel) "Node Editor"
+    (when (nk:window-begin context layout "Node Editor"
                            (nk:make-rect 10 10 800 600)
                            '(border no-scrollbar movable closable))
       (let ((input (nk:context-input context))
@@ -81,7 +85,6 @@
         (nk:layout-space-begin context #t (nk:rect-h total-space) 42)
 
         (let ((size (nk:layout-space-bounds context))
-              (layout (nk:make-panel))
               (updated #f))
           (when (node-editor-show-grid? editor)
             (let ((grid-size 32.0))
@@ -114,7 +117,7 @@
                                         (nk:rect-h bounds))))
                (nk:layout-space-push context rect))
 
-             (when (nk:group-begin context layout (node-name node)
+             (when (nk:group-begin context node-layout (node-name node)
                                    '(movable no-scrollbar border title))
                (let* ((bounds (node-bounds node))
                       (bounds* (nk:layout-space-rect-to-screen context bounds))
@@ -133,7 +136,7 @@
                  (nk:color-a-set! color (nk:property-int context "#A:" 0 (nk:color-a color) 255 1 1)))
                (nk:group-end context))
 
-             (let* ((bounds (nk:layout-space-rect-to-local context (nk:panel-bounds layout)))
+             (let* ((bounds (nk:layout-space-rect-to-local context (nk:panel-bounds node-layout)))
                     (scroll (node-editor-scrolling editor))
                     (style (nk:context-style context))
                     (border-width (nk:style-window-border style)))
@@ -145,7 +148,7 @@
 
              (let* ((in-count (node-in-count node))
                     (out-count (node-out-count node))
-                    (bounds (nk:panel-bounds layout))
+                    (bounds (nk:panel-bounds node-layout))
                     (height (nk:rect-h bounds))
                     (in-space (/ height (add1 in-count)))
                     (out-space (/ height (add1 out-count))))
@@ -204,7 +207,7 @@
 
           (for-each
            (lambda (link)
-             (let* ((bounds (nk:panel-bounds layout))
+             (let* ((bounds (nk:panel-bounds node-layout))
                     (height (nk:rect-h bounds))
                     (scroll (node-editor-scrolling editor))
                     (in (node-editor-find editor (link-in-id link)))
@@ -236,7 +239,7 @@
           (when updated
             (node-editor-reshuffle! editor (node-id updated)))
 
-          (when (nk:contextual-begin context (nk:make-panel) '()
+          (when (nk:contextual-begin context context-layout '()
                                      (nk:make-vec2 100 220)
                                      (nk:window-bounds context))
             (nk:layout-row-dynamic context 25 1)

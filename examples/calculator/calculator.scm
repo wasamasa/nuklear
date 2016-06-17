@@ -21,6 +21,7 @@
 (define acc 0)
 (define term 0)
 (define current 0)
+(define layout (nk:make-panel))
 (define background (nk:rgb->color 28 48 62))
 
 (let loop ()
@@ -28,7 +29,7 @@
     (glfw:poll-events)
     (backend:new-frame)
 
-    (when (nk:window-begin context (nk:make-panel) "Calculator"
+    (when (nk:window-begin context layout "Calculator"
                            (nk:make-rect 10 10 180 250)
                            '(border no-scrollbar movable))
       (nk:layout-row-dynamic context 35 1)
