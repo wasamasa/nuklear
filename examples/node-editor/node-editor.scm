@@ -82,7 +82,7 @@
       (let ((input (nk:context-input context))
             (canvas (nk:window-canvas context))
             (total-space (nk:window-content-region context)))
-        (nk:layout-space-begin context #t (nk:rect-h total-space) 42)
+        (nk:layout-space-begin context #f (nk:rect-h total-space) 42)
 
         (let ((size (nk:layout-space-bounds context))
               (updated #f))
